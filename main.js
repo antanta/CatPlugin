@@ -80,143 +80,6 @@ function SpriteSheet(path, frameWidth, frameHeight, frameSpeed, endFrame, frames
     return this;
 }
 
-var reqanimationreference; // indicates the runnning animation
-var canvas; // the canvas
-var ctx; // the canvas' context
-
-$(document).ready(function () {
-    var c = document.getElementById("myCanvas");
-    canvas = $(c);
-    ctx = c.getContext("2d");
-
-    var stretch = 0.8; // 1:1 fill with the whole canvas
-    var args1 = ['images/cat_sprite.png', 400, 200, 7, 12, 1, 0, 0, stretch, 10, true];
-    var args2 = ['images/cat_sprite.png', 400, 200, 10, 6, 1, 0, 1, stretch, 1, false];
-    var args3 = ['images/cat_sprite.png', 400, 200, 5, 12, 1, 0, 2, stretch, 0, false];
-    var args4 = ['images/cat_sprite.png', 400, 200, 5, 13, 1, 0, 3, stretch, 0, false];
-
-    // spritesheets
-    var spritesheet1 = SpriteSheet.apply(Object.create(SpriteSheet.prototype), args1);
-    var spritesheet2 = SpriteSheet.apply(Object.create(SpriteSheet.prototype), args2);
-    var spritesheet3 = SpriteSheet.apply(Object.create(SpriteSheet.prototype), args3);
-    var spritesheet4 = SpriteSheet.apply(Object.create(SpriteSheet.prototype), args4);
-
-    // animation sequences - multiple spritesheets
-    var anim = new Animation([spritesheet1, spritesheet2]);
-
-    // prepare the canvas
-
-    //read the local storage to determine if cat should be displayed
-    var useCat = false;
-    if (sessionStorage) {
-        var item = sessionStorage.getItem('useCat');
-        if (item == null) {
-            sessionStorage.setItem("useCat", useCat);
-        } else {
-            useCat = item == "true";
-        }
-    }
-
-    canvas
-        .css({
-            bottom: 0,
-            right: "-120px",
-            width: "120px",
-            height: "60px"
-        })
-        .on('click', function (e) {
-            if (!anim.isRunning) {
-                new Animation([spritesheet4]).beginAnimation();
-            }
-            //anim.stopAnimation();
-        });
-
-    if (useCat) {
-        canvas
-        .css({
-            right: "90px",//TODO: 340px actually the animation stopped earlier - save this in the session storage
-        });
-        drawCat(0, 0, 'images/cat_sprite.png', 400, 200, 5, 1, stretch);
-    }
-
-    $('#toggleCat').on('click', function () {
-        if (anim.isRunning) {
-            return;
-        }
-
-        useCat = !useCat;
-        sessionStorage.setItem("useCat", useCat);
-        
-        canvas
-        .css({
-            bottom: 0,
-            right: "-120px",
-            width: "120px",
-            height: "60px"
-        })
-
-        if (useCat) {
-            canvas
-            .css({
-                right: "-120px"
-            })
-            .animate({
-                right: "340px"
-            }, 6000);
-    
-            anim.beginAnimation();    
-        } else {
-            //do nothing, just hide the cat
-        }
-    });
-});
-
-function prepareCanvas() {
-    // fix the canvas
-    $('#myCanvas').on('click', function (e) {
-        if (!anim.isRunning) {
-            new Animation([spritesheet4]).beginAnimation();
-        }
-        //anim.stopAnimation();
-    });
-
-}
-
-function drawCat(x, y, path, frameWidth, frameHeight, rowPos, colPos, stretch) {
-    var image2 = new Image();
-    image2.onload = function() {
-        // At this point, the image is fully loaded
-        // So do your thing!
-
-        ctx.drawImage(
-            image2,
-            colPos * frameWidth, rowPos * frameHeight,
-            frameWidth, frameHeight,
-            x, y,
-            frameWidth * stretch, frameHeight * stretch); //stretch or reduce the image
-    };
-
-    image2.src = 'images/cat_sprite.png';
-    
-    // ctx.beginPath();
-    // ctx.moveTo(0,0);
-    // ctx.lineTo(300,150);
-    // ctx.stroke();
-    
-    //ctx.clearRect(x, y, frameWidth * stretch, frameHeight * stretch);
-    //return;
-    
-}
-
-function animate() {
-    // this is the spritesheet
-    var spritesheet = this;
-    // call again to animate the next frame
-    reqanimationreference = window.requestAnimationFrame(animate.bind(spritesheet));
-    spritesheet.update();
-    spritesheet.draw(0, 0);
-}
-
 function Animation(spritesheets) {
     var counter = 0;
     var that = this;
@@ -234,6 +97,7 @@ function Animation(spritesheets) {
 
     this.stopAnimation = function () {
         window.cancelAnimationFrame(reqanimationreference);
+        this.isRunning = false;
     };
 
     // Animate a single spiresheet animation
@@ -252,3 +116,202 @@ function Animation(spritesheets) {
 
     return this;
 }
+
+function Cat() {
+
+}
+
+Cat.prototype = {
+    reqanimationreference: null,    // indicates the runnning animation
+    runningAnim: null,                     // the current animation
+    settings: {
+        useCat: false,
+        initialCanvasRight: "-120px",
+        canvasWidth: 120,
+        cavaseheight: 60,
+
+        frameWidth: 400,
+        frameHeight: 200,
+        stretch: 0.8,               // 1:1 fill with the whole canvas
+        spriteImagePath: 'images/cat_sprite.png'
+    },
+    settingKeys: {
+        useCat: {
+            storageKey: "catPlugin.useCat",
+            type: "boolean"
+        }
+    },
+    // spritesheets
+    spritesheet1: null,
+    spritesheet2: null,
+    spritesheet3: null,
+    spritesheet4: null,
+
+
+    init: function () {
+        /// <summary>Initial configuration.</summary>
+
+        var c = document.getElementById("myCanvas");
+        canvas = $(c);
+        ctx = c.getContext("2d");
+
+        var args1 = [this.settings.spriteImagePath, this.settings.frameWidth, this.settings.frameHeight, 7, 12, 1, 0, 0, this.settings.stretch, 10, true];
+        var args2 = [this.settings.spriteImagePath, this.settings.frameWidth, this.settings.frameHeight, 7, 6, 1, 0, 1, this.settings.stretch, 1, false];
+        var args3 = [this.settings.spriteImagePath, this.settings.frameWidth, this.settings.frameHeight, 5, 12, 1, 0, 2, this.settings.stretch, 0, false];
+        var args4 = [this.settings.spriteImagePath, this.settings.frameWidth, this.settings.frameHeight, 4, 13, 1, 0, 3, this.settings.stretch, 0, false];
+
+        // spritesheets
+        this.spritesheet1 = SpriteSheet.apply(Object.create(SpriteSheet.prototype), args1);
+        this.spritesheet2 = SpriteSheet.apply(Object.create(SpriteSheet.prototype), args2);
+        this.spritesheet3 = SpriteSheet.apply(Object.create(SpriteSheet.prototype), args3);
+        this.spritesheet4 = SpriteSheet.apply(Object.create(SpriteSheet.prototype), args4);
+
+        // do other stuff
+        this.loadSettingFromStorage();
+        this.setupCanvas();
+        this.addHandlersToButtons();
+        this.runningAnim = new Animation([this.spritesheet1, this.spritesheet2]);// animation sequences - multiple spritesheets
+    },
+
+    loadSettingFromStorage: function () {
+        /// <summary>Оverride the initial settings from the session storage.</summary>
+
+        if (sessionStorage) {
+            for (var prop in this.settingKeys) {
+                if (this.settingKeys.hasOwnProperty(prop)) {
+                    key = this.settingKeys[prop].storageKey;
+
+                    var item = sessionStorage.getItem(key);
+                    if (item == null) {
+                        sessionStorage.setItem(key, this.settings[prop]);
+                    } else {
+                        // Appropriate parsing is done here for each key setting
+                        var newValue;
+                        switch (this.settingKeys[prop].type) {
+                            case 'boolean':
+                                newValue = item == "true";
+                                break;
+                            default:
+                                newValue = item;
+                        }
+                        this.settings[prop] = newValue;
+                    }
+                }
+            }
+        }
+    },
+
+    setUseCat: function (value) {
+        sessionStorage.setItem(this.settingKeys.useCat.storageKey, value);
+    },
+
+    setupCanvas: function () {
+        var that = this;
+        var duration = 5000;
+        var howfar;
+        var right = this.settings.initialCanvasRight;
+
+        canvas.css({
+            bottom: 0,
+            // TODO 90px instead 340px actually the animation stopped earlier - save this in the session storage
+            right: this.settings.useCat ? "90px" : right,
+            left: "",
+            width: this.settings.canvasWidth + "px",
+            height: this.settings.canvasHeight + "px"
+        })
+            .on('click', function (e) {
+                if (that.runningAnim && !that.runningAnim.isRunning) {
+
+                    that.settings.useCat = !that.settings.useCat;
+                    that.setUseCat(false);
+                    canvas.stop();
+                    canvas.animate({
+                        left: right // almost the same like the initial right position
+                    }, {
+                            duration: duration,
+                            step: function (now, fx) {
+                                howfar = fx.pos;  // between 0 and 1, tells how far along %
+                            },
+                            complete: function () {
+                                that.runningAnim.stopAnimation();
+                            }
+                        });
+
+                    that.runningAnim = new Animation([that.spritesheet4]);
+                    that.runningAnim.beginAnimation();
+                }
+            });
+
+        // if initial setting is use cat, then draw it
+        if (this.settings.useCat) {
+            this.drawCatFrame(0, 0, this.settings.spriteImagePath, this.settings.frameWidth, this.settings.frameHeight, 5, 1, this.settings.stretch);
+        }
+    },
+
+    drawCatFrame: function (x, y, path, frameWidth, frameHeight, rowPos, colPos, stretch) {
+        var image = new Image();
+        image.onload = function () {
+            // At this point, the image is fully loaded
+
+            ctx.drawImage(
+                image,
+                colPos * frameWidth, rowPos * frameHeight,
+                frameWidth, frameHeight,
+                x, y,
+                frameWidth * stretch, frameHeight * stretch);
+        };
+
+        image.src = path;
+    },
+
+    addHandlersToButtons: function () {
+        var that = this,
+            right = this.settings.initialCanvasRight;
+
+        $('#toggleCat').on('click', function () {
+            if (that.runningAnim.isRunning) {
+                return;
+            }
+
+            that.settings.useCat = !that.settings.useCat;
+            that.setUseCat(that.settings.useCat);
+
+            canvas
+                .stop()
+                .css({
+                    right: right,
+                    left: "",
+                });
+
+            if (that.settings.useCat) {
+                that.runningAnim = new Animation([that.spritesheet1, that.spritesheet2]);
+                that.runningAnim.beginAnimation();
+                
+                canvas.animate({
+                    right: "340px"
+                }, {
+                        duration: 6000
+                    });
+
+            }
+        });
+    }
+};
+
+var reqanimationreference; // indicates the runnning animation
+var ctx; // the drawing context
+var canvas;
+
+function animate() {
+    /// <summary>Main animate functon. The context is set to an instance of SpriteSheet class</summary>
+
+    var spritesheet = this;
+    // call again to animate the next frame
+    reqanimationreference = window.requestAnimationFrame(animate.bind(spritesheet));
+    spritesheet.update();
+    spritesheet.draw(0, 0);
+}
+
+$(document).ready(function () {
+    new Cat().init();
+});
